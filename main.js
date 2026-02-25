@@ -586,7 +586,7 @@ function scorePopup(pts, x, y) {
   el.className = 'num-pop';
   Object.assign(el.style, {
     position: 'fixed', left: (x - 20) + 'px', top: (y - 10) + 'px',
-    fontFamily: 'Nunito, sans-serif', fontSize: '1.5rem', fontWeight: '900',
+    fontFamily: "'Fredoka', 'Nunito', 'Zen Maru Gothic', sans-serif", fontSize: '1.5rem', fontWeight: '900',
     color: 'white', textShadow: '0 2px 6px rgba(0,0,0,.3)',
     pointerEvents: 'none', zIndex: '950',
     animation: 'burstOut 1.4s ease forwards',
