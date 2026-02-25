@@ -24,7 +24,13 @@
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-user-select: none;
 }
-html, body { height: 100%; background: #0F0E1A; }
+html, body {
+  height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  background: var(--theme);
+  box-sizing: border-box;
+}
 
 /* ══════════════════════════════════════════════════
    APP
@@ -32,7 +38,8 @@ html, body { height: 100%; background: #0F0E1A; }
 #app {
   position: relative;
   width: 100%; max-width: 430px;
-  height: 100dvh; height: 100vh;
+  min-height: 100dvh;
+  min-height: 100vh;
   min-height: -webkit-fill-available;
   margin: 0 auto;
   background: var(--theme);
@@ -97,7 +104,7 @@ html, body { height: 100%; background: #0F0E1A; }
   width: calc(100% - 16px);
   margin: 0 8px 8px;
   padding: 10px;
-  padding-bottom: max(env(safe-area-inset-bottom,10px),10px);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
   background: white;
   border-radius: 18px;
   border: 1px solid rgba(0,0,0,.06);
@@ -666,6 +673,7 @@ html, body { height: 100%; background: #0F0E1A; }
   inset: 0;
   z-index: 50;
   overflow: hidden;
+  touch-action: none;
 }
 #color-picker-sheet.hidden { display: none; }
 
@@ -689,6 +697,7 @@ html, body { height: 100%; background: #0F0E1A; }
   border-radius: 50%;
   cursor: grab;
   pointer-events: auto;
+  touch-action: none;
   opacity: 0;
   filter: none;
   transition: opacity 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -700,7 +709,6 @@ html, body { height: 100%; background: #0F0E1A; }
   cursor: grabbing;
   transform: scale(1.22);
   z-index: 10;
-  touch-action: none;
 }
 
 /* ══════════════════════════════════════════════════

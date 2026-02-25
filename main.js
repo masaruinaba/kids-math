@@ -261,6 +261,7 @@ function buildColorBalls() {
 
     div.addEventListener('pointermove', (e) => {
       if (!dragState || dragState.ball !== ball) return;
+      e.preventDefault();
       const rect = cup.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
