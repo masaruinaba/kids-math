@@ -24,13 +24,7 @@
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-user-select: none;
 }
-html, body {
-  height: 100%;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
-  background: var(--theme);
-  box-sizing: border-box;
-}
+html, body { height: 100%; background: #0F0E1A; }
 
 /* ══════════════════════════════════════════════════
    APP
@@ -38,8 +32,7 @@ html, body {
 #app {
   position: relative;
   width: 100%; max-width: 430px;
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100dvh; height: 100vh;
   min-height: -webkit-fill-available;
   margin: 0 auto;
   background: var(--theme);
@@ -102,9 +95,8 @@ html, body {
   align-items: center;
   gap: 10px;
   width: calc(100% - 16px);
-  margin: 0 8px 8px;
+  margin: 0 8px 6px;
   padding: 10px;
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
   background: white;
   border-radius: 18px;
   border: 1px solid rgba(0,0,0,.06);
