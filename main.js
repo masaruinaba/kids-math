@@ -64,9 +64,9 @@ const BALLS = {
   w: 0,
   h: 0,
   raf: null,
-  gravity: 0.28,
-  bounce: 0.68,
-  friction: 0.985,
+  gravity: 0.72,
+  bounce: 0.62,
+  friction: 0.982,
 };
 
 function updateBallPos(b) {
@@ -189,12 +189,12 @@ function buildColorBalls() {
     const color = colors[i % colors.length];
     const r = 14 + Math.random() * 36;
     const x = r + Math.random() * (w - r * 2);
-    const y = -r - Math.random() * 180;
+    const y = -r - Math.random() * 90;
     const ball = {
       x, y, r, color,
-      vx: (Math.random() - 0.5) * 3,
+      vx: (Math.random() - 0.5) * 4,
       vy: 0,
-      spawnDelay: i * 0.055 + Math.random() * 0.05,
+      spawnDelay: i * 0.028 + Math.random() * 0.02,
       dragging: false,
     };
 
@@ -208,7 +208,70 @@ function buildColorBalls() {
     div.style.background = color;
     div.style.pointerEvents = 'auto';
 
-    div.addEventListener('click', () => {
+    let dragState = null;
+    let didDrag = false;
+    const VELOCITY_SMOOTH = 0.35;
+    const THROW_MULT = 0.9;
+
+    div.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.button !== undefined) return;
+      e.preventDefault();
+      didDrag = false;
+      const rect = cup.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const dx = px - ball.x, dy = py - ball.y;
+      if (dx * dx + dy * dy <= ball.r * ball.r * 1.2) {
+        dragState = {
+          ball, lastX: px, lastY: py, lastT: performance.now(),
+          vx: 0, vy: 0,
+        };
+        ball.dragging = true;
+        ball.el.classList.add('grabbed');
+        div.setPointerCapture(e.pointerId);
+      }
+    });
+
+    div.addEventListener('pointermove', (e) => {
+      if (!dragState || dragState.ball !== ball) return;
+      const rect = cup.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const dist = Math.hypot(px - dragState.lastX, py - dragState.lastY);
+      if (dist > 4) didDrag = true;
+      const dt = (performance.now() - dragState.lastT) / 16.67;
+      if (dt > 0) {
+        dragState.vx = dragState.vx * (1 - VELOCITY_SMOOTH) + ((px - dragState.lastX) / dt) * VELOCITY_SMOOTH;
+        dragState.vy = dragState.vy * (1 - VELOCITY_SMOOTH) + ((py - dragState.lastY) / dt) * VELOCITY_SMOOTH;
+      }
+      dragState.lastX = px;
+      dragState.lastY = py;
+      dragState.lastT = performance.now();
+      ball.x = Math.max(ball.r, Math.min(BALLS.w - ball.r, px));
+      ball.y = Math.max(ball.r, Math.min(BALLS.h - ball.r, py));
+      updateBallPos(ball);
+    });
+
+    div.addEventListener('pointerup', (e) => {
+      if (!dragState || dragState.ball !== ball) return;
+      div.releasePointerCapture(e.pointerId);
+      ball.vx = dragState.vx * THROW_MULT;
+      ball.vy = dragState.vy * THROW_MULT;
+      ball.dragging = false;
+      ball.el.classList.remove('grabbed');
+      dragState = null;
+    });
+
+    div.addEventListener('pointercancel', (e) => {
+      if (dragState && dragState.ball === ball) {
+        ball.dragging = false;
+        ball.el.classList.remove('grabbed');
+        dragState = null;
+      }
+    });
+
+    div.addEventListener('click', (e) => {
+      if (didDrag) return;
       sfx.click();
       g.lockedTheme = 'custom';
       applyPickerColor(color);
@@ -526,10 +589,10 @@ class DigitRecognizer {
     const avg   = inked.length > 0 ? inked.reduce((a, b) => a + b, 0) / inked.length : 1;
 
     const shouldSplit = minIdx >= 0 && (
-      minVal < avg * 0.25 ||
-      (ratio > 1.1 && minVal < avg * 0.4) ||
-      (ratio > 1.5 && minVal < avg * 0.55) ||
-      (ratio > 2.0 && minVal < avg * 0.7)
+      minVal < avg * 0.15 ||
+      (ratio > 1.3 && minVal < avg * 0.28) ||
+      (ratio > 1.7 && minVal < avg * 0.40) ||
+      (ratio > 2.2 && minVal < avg * 0.55)
     );
 
     if (shouldSplit) {
@@ -542,11 +605,11 @@ class DigitRecognizer {
   }
 
   _cropAndNorm(canvas, x0, y0, x1, y1) {
-    const pad = 24;  // 答えエリア余白を十分に確保（認識精度120%）
+    const pad = 16;
     const minSide = 28;
     const bw  = Math.max(x1 - x0 + pad * 2, minSide);
     const bh  = Math.max(y1 - y0 + pad * 2, minSide);
-    const fitSize = 24;  // MNIST 28x28 に大きくフィット
+    const fitSize = 24;
     const scale = Math.min(fitSize / bw, fitSize / bh);
     const dw = bw * scale, dh = bh * scale;
     const dx = (28 - dw) / 2, dy = (28 - dh) / 2;
@@ -555,21 +618,20 @@ class DigitRecognizer {
     const tc  = tmp.getContext('2d', { willReadFrequently: true });
     tc.imageSmoothingEnabled = true;
     tc.imageSmoothingQuality = 'high';
-    tc.fillStyle = '#000';
+    tc.fillStyle = 'white';
     tc.fillRect(0, 0, 28, 28);
-    tc.save(); tc.filter = 'invert(1)';
     tc.drawImage(canvas, x0 - pad, y0 - pad, bw, bh, dx, dy, dw, dh);
-    tc.restore();
 
     const id  = tc.getImageData(0, 0, 28, 28);
     const raw = new Float32Array(28 * 28);
     for (let i = 0; i < 28 * 28; i++) {
+      // CSS filterに依存しない手動反転: 暗いインク → 高い値（MNIST形式）
       const v = (id.data[i * 4] + id.data[i * 4 + 1] + id.data[i * 4 + 2]) / 3;
-      raw[i] = v / 255;
+      raw[i] = (255 - v) / 255;
     }
     this._dilate(raw, 28, 28);
     for (let i = 0; i < raw.length; i++)
-      raw[i] = raw[i] > 0.10 ? Math.min(raw[i] * 1.6, 1.0) : 0;  // 薄い線も拾いコントラスト強化
+      raw[i] = raw[i] > 0.12 ? Math.min(raw[i] * 1.5, 1.0) : 0;
     return raw;
   }
 
@@ -598,7 +660,7 @@ class DigitRecognizer {
     for (let i = 1; i < 10; i++) {
       if (probs[i] > bestVal) { bestVal = probs[i]; best = i; }
     }
-    return bestVal > 0.025 ? best : null;  // 信頼度閾値緩和（認識精度120%）
+    return bestVal > 0.35 ? best : null;
   }
 }
 
@@ -734,12 +796,14 @@ function setDifficulty(key) {
 }
 
 // ── Game state ────────────────────────────────────────────────
-const TOTAL = 10, MAX_LIVES = 3;
+const FREE_TOTAL = 10, STORY_TOTAL = 5, MAX_LIVES = 3;
 const g = {
   problem: null, answered: false,
   score: 0, streak: 0, lives: MAX_LIVES, qNum: 0,
   lastRecognized: null, lockedTheme: null,
 };
+const story = { active: false, stageId: null, _showingResult: false, data: storyLoad() };
+function getTotal() { return story.active ? STORY_TOTAL : FREE_TOTAL; }
 
 // ── DOM refs ──────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -764,6 +828,10 @@ const el = {
   diffToggle:   $('diff-toggle'),
   diffToggleLabel: $('diff-toggle-label'),
   diffDrawer:   $('diff-drawer'),
+  diffSection:  $('diff-section'),
+  storyScreen:  $('story-screen'),
+  storyModeBtn: $('story-mode-btn'),
+  storyBackBtn: $('story-back-btn'),
 };
 
 const DIFF_LABELS = { easy:'1ねんせい①', medium:'1ねんせい②', normal:'2ねんせい①', hard:'2ねんせい②', mult1:'かけざん①', mult2:'かけざん②', div1:'わりざん①', div2:'わりざん②' };
@@ -794,9 +862,9 @@ function shakeCanvas() {
 
 // ── Stats ─────────────────────────────────────────────────────
 function renderStats() {
-  el.qVal.textContent     = `${g.qNum}/${TOTAL}`;
+  el.qVal.textContent     = `${g.qNum}/${getTotal()}`;
   el.scoreVal.textContent = g.score;
-  el.prog.style.width     = (g.qNum / TOTAL * 100) + '%';
+  el.prog.style.width     = (g.qNum / getTotal() * 100) + '%';
 }
 
 // ── Load problem ──────────────────────────────────────────────
@@ -930,25 +998,37 @@ function showNextBtnSafe() {
 el.nextBtn.addEventListener('click', () => {
   if (el.nextBtn.classList.contains('disabled')) return;
   sfx.click();
-  if (g.qNum >= TOTAL) showModal();
-  else loadProblem();
+  if (g.qNum >= getTotal()) {
+    if (story.active) finishStoryStage();
+    else showModal();
+  } else {
+    loadProblem();
+  }
 });
 
 // ── Game over modal ───────────────────────────────────────────
 function showModal() {
-  const tbl = [['★★★','かんぺき！', TOTAL*10+20],['★★','すごい！', TOTAL*9],['★','よくできた！', TOTAL*6]];
+  const total = getTotal();
+  const tbl = [['★★★','かんぺき！', total*10+20],['★★','すごい！', total*9],['★','よくできた！', total*6]];
   const row  = tbl.find(([,,t]) => g.score >= t) ?? ['','がんばった！', 0];
   el.mIcon.textContent  = row[0];
   el.mTitle.textContent = row[1];
-  el.mSub.textContent   = `${TOTAL}もん　${g.score}てん`;
+  el.mSub.textContent   = `${total}もん　${g.score}てん`;
   el.modal.classList.remove('hidden');
   sfx.end(); launchConfetti(80);
 }
 el.mBtn.addEventListener('click', () => {
   sfx.click();
   el.modal.classList.add('hidden');
-  Object.assign(g, { score:0, streak:0, lives:MAX_LIVES, qNum:0 });
-  loadProblem();
+  if (story._showingResult) {
+    story._showingResult = false;
+    el.mBtn.textContent = 'もう一度！';
+    el.diffSection.classList.remove('hidden');
+    showStoryScreen();
+  } else {
+    Object.assign(g, { score:0, streak:0, lives:MAX_LIVES, qNum:0 });
+    loadProblem();
+  }
 });
 
 // ── Canvas clear ──────────────────────────────────────────────
@@ -1069,8 +1149,125 @@ if (el.diffToggle) el.diffToggle.addEventListener('click', () => {
   document.addEventListener('touchstart', e => { if (e.touches[0]) movePupils(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
 })();
 
+// ── Story Mode ────────────────────────────────────────────────
+const STORY_STAGES = [
+  { id:1, name:'たまご',   diff:'easy'   },
+  { id:2, name:'アンテナ', diff:'medium' },
+  { id:3, name:'まゆげ',   diff:'normal' },
+  { id:4, name:'キラキラ', diff:'hard'   },
+  { id:5, name:'かんむり', diff:'mult1'  },
+  { id:6, name:'かがやき', diff:'mult2'  },
+  { id:7, name:'マント',   diff:'div1'   },
+  { id:8, name:'でんせつ', diff:'div2'   },
+];
+
+function storyLoad() {
+  try {
+    const raw = localStorage.getItem('mathmon_story');
+    if (!raw) return { stages: {}, highestCleared: 0 };
+    return JSON.parse(raw);
+  } catch (_) { return { stages: {}, highestCleared: 0 }; }
+}
+
+function storySave(data) {
+  try { localStorage.setItem('mathmon_story', JSON.stringify(data)); } catch (_) {}
+}
+
+function applyMonsterGrowth(n) {
+  const app = document.getElementById('app');
+  for (let i = 1; i <= 8; i++) app.classList.remove(`mon-s${i}`);
+  for (let i = 1; i <= n; i++) app.classList.add(`mon-s${i}`);
+}
+
+function buildStoryMap() {
+  const map = document.getElementById('story-map');
+  map.innerHTML = '';
+  const d = story.data;
+  STORY_STAGES.forEach((s, i) => {
+    if (i > 0) {
+      const line = document.createElement('div');
+      const prevCleared = !!d.stages[STORY_STAGES[i - 1].id];
+      line.className = `stage-path-line ${prevCleared ? 'cleared' : 'locked'}`;
+      map.appendChild(line);
+    }
+    const stageData  = d.stages[s.id];
+    const isCleared  = !!stageData;
+    const isUnlocked = s.id <= (d.highestCleared || 0) + 1;
+    const isLocked   = !isUnlocked;
+    const isCurrent  = !isCleared && isUnlocked;
+    let stars = '';
+    if (isCleared)     stars = '★'.repeat(stageData.stars) + '☆'.repeat(3 - stageData.stars);
+    else if (isCurrent) stars = '☆☆☆';
+    const node = document.createElement('div');
+    node.className = `stage-node ${isCleared ? 'cleared' : isCurrent ? 'current' : 'locked'}`;
+    node.innerHTML = `<div class="stage-num">${s.id}</div><div class="stage-name">${s.name}</div><div class="stage-stars">${stars}</div>`;
+    if (!isLocked) node.addEventListener('click', () => { sfx.click(); startStoryStage(s.id); });
+    map.appendChild(node);
+  });
+}
+
+function showStoryScreen() {
+  buildStoryMap();
+  el.storyScreen.classList.remove('hidden');
+  document.getElementById('main-content').classList.add('hidden');
+  document.getElementById('bottom-bar').classList.add('hidden');
+}
+
+function hideStoryScreen() {
+  el.storyScreen.classList.add('hidden');
+  document.getElementById('main-content').classList.remove('hidden');
+  document.getElementById('bottom-bar').classList.remove('hidden');
+}
+
+function startStoryStage(id) {
+  const stage = STORY_STAGES.find(s => s.id === id);
+  if (!stage) return;
+  story.active  = true;
+  story.stageId = id;
+  el.storyScreen.classList.add('hidden');
+  document.getElementById('main-content').classList.remove('hidden');
+  document.getElementById('bottom-bar').classList.remove('hidden');
+  el.diffSection.classList.add('hidden');
+  setDifficulty(stage.diff);
+  Object.assign(g, { score: 0, streak: 0, lives: MAX_LIVES, qNum: 0 });
+  loadProblem();
+}
+
+function finishStoryStage() {
+  const id   = story.stageId;
+  const data = story.data;
+  const stars = g.score >= 60 ? 3 : g.score >= 30 ? 2 : 1;
+  const prev  = data.stages[id];
+  if (!prev || stars > prev.stars) {
+    data.stages[id] = { stars, bestScore: g.score };
+  } else if (g.score > prev.bestScore) {
+    data.stages[id].bestScore = g.score;
+  }
+  if (id > (data.highestCleared || 0)) data.highestCleared = id;
+  storySave(data);
+  applyMonsterGrowth(data.highestCleared);
+  story.active  = false;
+  story.stageId = null;
+  showStoryResultModal(stars, id);
+}
+
+function showStoryResultModal(stars, id) {
+  const msgs = { 3:'かんぺき！', 2:'すごい！', 1:'よくできた！' };
+  el.mIcon.textContent  = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  el.mTitle.textContent = msgs[stars];
+  el.mSub.textContent   = `${STORY_TOTAL}もん　${g.score}てん`;
+  el.mBtn.textContent   = 'マップへ！';
+  story._showingResult  = true;
+  el.modal.classList.remove('hidden');
+  sfx.end(); launchConfetti(stars >= 2 ? 80 : 40);
+}
+
+if (el.storyModeBtn) el.storyModeBtn.addEventListener('click', () => { sfx.click(); showStoryScreen(); });
+if (el.storyBackBtn) el.storyBackBtn.addEventListener('click', () => { sfx.click(); hideStoryScreen(); });
+
 // ── Boot ──────────────────────────────────────────────────────
 initColorBalls();
 applyTheme(DIFF_COLORS['easy']);
+applyMonsterGrowth(story.data.highestCleared);
 initProblems().then(() => loadProblem());
 recognizer._ensureModel().then(ok => { if (ok) console.log('[MathMon] MNIST ready'); });

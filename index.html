@@ -34,6 +34,8 @@
         </div>
       </div>
       <div id="smile" aria-hidden="true"></div>
+      <div id="monster-crown" aria-hidden="true"></div>
+      <div id="monster-cape"  aria-hidden="true"></div>
     </div>
 
     <!-- Problem -->
@@ -89,6 +91,12 @@
     <button id="next-btn" class="hidden num-pop" type="button">つぎへ →</button>
   </main>
 
+  <div id="story-screen" class="hidden">
+    <div id="story-header"><span>ものがたりモード</span></div>
+    <div id="story-map"></div>
+    <button id="story-back-btn" type="button">← もどる</button>
+  </div>
+
   <!-- 下部バー: 問題集・機能・ステータス -->
   <footer id="bottom-bar">
     <div id="diff-section">
@@ -108,6 +116,7 @@
         <button class="diff-btn num-pop" data-diff="div2">わりざん②</button>
       </div>
     </div>
+    <button id="story-mode-btn" type="button" aria-label="ものがたりモード">★</button>
     <nav id="nav" role="status" aria-label="ゲームのじょうきょう">
     <div id="nav-center">
       <div id="prog-wrap"><div id="prog-bar"></div></div>
