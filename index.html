@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>MathMon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <div id="antennae" aria-hidden="true">
+    <div class="ant" id="ant-l"><div class="ant-stem"></div><div class="ant-ball"></div></div>
+    <div class="ant" id="ant-r"><div class="ant-stem"></div><div class="ant-ball"></div></div>
+  </div>
+
+  <!-- メイン: 顔 → 式 → 手書き → 回答 → キーボード → 次へ -->
+  <main id="main-content">
+    <div id="character" aria-hidden="true">
+      <div id="eyes">
+        <div class="eye-unit">
+          <div class="brow"></div>
+          <div class="eye" id="eye-l"><div class="pupil" id="pup-l"></div></div>
+        </div>
+        <div class="eye-unit">
+          <div class="brow"></div>
+          <div class="eye" id="eye-r"><div class="pupil" id="pup-r"></div></div>
+        </div>
+      </div>
+      <div id="smile" aria-hidden="true"></div>
+    </div>
+
+    <!-- Problem -->
+  <div id="problem-card">
+    <div id="prob-label"></div>
+    <div id="prob-eq">
+      <span id="num-a" class="num-pop"></span>
+      <span id="op-sym" class="num-pop"></span>
+      <span id="num-b" class="num-pop"></span>
+      <span id="eq-sym" class="num-pop">=</span>
+      <span id="ans-mark" class="num-pop">?</span>
+    </div>
+  </div>
+
+  <!-- Answer zone -->
+  <div id="answer-zone">
+    <div id="canvas-wrap">
+      <canvas id="draw-canvas" width="560" height="280" aria-label="こたえをかくところ"></canvas>
+      <button id="canvas-clear-btn" type="button" aria-label="けす">けす</button>
+      <button id="numpad-toggle" type="button" aria-label="すうじキーボード">123</button>
+    </div>
+
+    <div id="recognized-wrap">
+      <div id="recognized-display" class="recognized-num hidden" aria-live="polite"></div>
+    </div>
+
+    <div id="input-actions">
+      <button id="done-btn" type="button" class="num-pop">こたえる</button>
+    </div>
+
+    <div id="numpad" class="hidden">
+      <div id="numpad-display" class="num-pop"></div>
+      <div id="numpad-grid">
+        <button class="nk" data-val="1">1</button>
+        <button class="nk" data-val="2">2</button>
+        <button class="nk" data-val="3">3</button>
+        <button class="nk" data-val="4">4</button>
+        <button class="nk" data-val="5">5</button>
+        <button class="nk" data-val="6">6</button>
+        <button class="nk" data-val="7">7</button>
+        <button class="nk" data-val="8">8</button>
+        <button class="nk" data-val="9">9</button>
+        <button class="nk nk-del" data-val="del">
+          <svg width="18" height="14" viewBox="0 0 32 24" fill="currentColor" aria-hidden="true"><path d="M12 2L2 12l10 10h18V2H12zm10 13.5-2.5 2.5L16 14.5l-3.5 3.5-2.5-2.5 3.5-3.5-3.5-3.5 2.5-2.5 3.5 3.5 3.5-3.5z"/></svg>
+        </button>
+        <button class="nk" data-val="0">0</button>
+        <button class="nk nk-go" data-val="go">OK</button>
+      </div>
+    </div>
+  </div>
+
+    <div id="feedback" aria-live="assertive"></div>
+    <button id="next-btn" class="hidden num-pop" type="button">つぎへ →</button>
+  </main>
+
+  <!-- 下部バー: 問題集・機能・ステータス -->
+  <footer id="bottom-bar">
+    <div id="diff-section">
+      <button id="diff-toggle" type="button" aria-label="もんだいしゅう" aria-expanded="false">
+        <span class="diff-prefix">もんだい</span>
+        <span id="diff-toggle-label">1ねんせい①</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor" aria-hidden="true"><path d="M0 0l5 6 5-6z"/></svg>
+      </button>
+      <div id="diff-drawer" class="hidden">
+        <button class="diff-btn num-pop active" data-diff="easy">1ねんせい①</button>
+        <button class="diff-btn num-pop" data-diff="medium">1ねんせい②</button>
+        <button class="diff-btn num-pop" data-diff="normal">2ねんせい①</button>
+        <button class="diff-btn num-pop" data-diff="hard">2ねんせい②</button>
+        <button class="diff-btn num-pop" data-diff="mult1">かけざん①</button>
+        <button class="diff-btn num-pop" data-diff="mult2">かけざん②</button>
+        <button class="diff-btn num-pop" data-diff="div1">わりざん①</button>
+        <button class="diff-btn num-pop" data-diff="div2">わりざん②</button>
+      </div>
+    </div>
+    <nav id="nav" role="status" aria-label="ゲームのじょうきょう">
+    <div id="nav-center">
+      <div id="prog-wrap"><div id="prog-bar"></div></div>
+      <span id="q-val" class="num-pop">1/10</span>
+    </div>
+    <div id="nav-score">
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><polygon fill="#FFD93D" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+      <span id="score-val" class="num-pop">0</span>
+    </div>
+    </nav>
+    <button id="palette-fab" type="button" aria-label="はいけいのいろをかえる">
+    <span id="fab-dot"></span>
+    </button>
+  </footer>
+
+  <!-- カラーピッカー（ボタン押下で表示・色選択で閉じる） -->
+  <div id="color-picker-sheet" class="hidden">
+    <button id="color-picker-backdrop" aria-label="とじる"></button>
+    <div id="color-balls-cup" aria-label="いろをえらぶ"></div>
+  </div>
+
+</div>
+
+<div id="burst-layer" aria-hidden="true"></div>
+
+<div id="modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div id="modal-box">
+    <div id="modal-icon"></div>
+    <div id="modal-title">すごい！</div>
+    <div id="modal-sub" class="num-pop">0てん</div>
+    <button id="modal-btn" type="button">もう一度！</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
