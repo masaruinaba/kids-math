@@ -96,7 +96,7 @@ html, body { height: 100%; background: #0F0E1A; }
   gap: 10px;
   width: calc(100% - 16px);
   margin: 0 8px 6px;
-  padding: 10px;
+  padding: 14px;
   background: white;
   border-radius: 18px;
   border: 1px solid rgba(0,0,0,.06);
@@ -140,7 +140,7 @@ html, body { height: 100%; background: #0F0E1A; }
 #diff-drawer {
   position: absolute;
   bottom: calc(100% + 20px);
-  left: -10px;
+  left: -14px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -345,18 +345,20 @@ html, body { height: 100%; background: #0F0E1A; }
   padding: 6px 0 10px; text-align: center; margin-bottom: 2px;
   position: relative; z-index: 2;
   animation: cardIn .35s cubic-bezier(.175,.885,.32,1.275) both;
+  font-family: var(--font-num);
 }
 @keyframes cardIn { from{opacity:0;transform:translateY(12px) scale(.97)} to{opacity:1;transform:none} }
 #prob-label {
   display: inline-block; font-size: .62rem; font-weight: 800;
+  font-family: var(--font-num);
   text-transform: uppercase; letter-spacing: 2.5px; color: white;
   background: rgba(255,255,255,.16); padding: 3px 14px;
   border-radius: 50px; margin-bottom: 8px;
 }
-#prob-eq { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; box-sizing: content-box; margin-bottom: 16px; }
-#num-a, #num-b  { font-size: clamp(3.2rem,12vw,4.2rem); font-weight: 900; color: white; line-height: 1; }
-#op-sym  { font-size: clamp(2.2rem,8vw,3rem); font-weight: 900; color: rgba(255,255,255,.5); line-height: 1; }
-#eq-sym  { font-size: clamp(1.8rem,6vw,2.4rem); font-weight: 700; color: rgba(255,255,255,.3); line-height: 1; }
+#prob-eq { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; box-sizing: content-box; margin-bottom: 16px; font-family: var(--font-num); }
+#num-a, #num-b  { font-family: var(--font-num); font-size: clamp(3.2rem,12vw,4.2rem); font-weight: 900; color: white; line-height: 1; }
+#op-sym  { font-family: var(--font-num); font-size: clamp(2.2rem,8vw,3rem); font-weight: 900; color: rgba(255,255,255,.5); line-height: 1; }
+#eq-sym  { font-family: var(--font-num); font-size: clamp(1.8rem,6vw,2.4rem); font-weight: 700; color: rgba(255,255,255,.3); line-height: 1; }
 #ans-mark {
   font-family: var(--font-num); font-size: clamp(3.2rem,12vw,4.2rem);
   font-weight: 900; color: rgba(255,255,255,.9);
