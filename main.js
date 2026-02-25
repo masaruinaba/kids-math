@@ -37,10 +37,11 @@ function hexToHsl(hex) {
 
 // ── カラーピッカー（厳選色 + 精密モーション） ────────────────
 const PICKER_COLORS = [
-  '#3E7CE1', '#4AA3E8', '#34B3A0', '#46C17C',
-  '#F2A33A', '#EE7B5E', '#DA5C8C', '#8A6BE8',
-  '#5B6D9A', '#4C7A70', '#C66B44', '#7A4DAE',
-  '#2F4F7F', '#A5537A',
+  '#3E7CE1', '#4AA3E8', '#34B3A0', '#46C17C', '#5BC04A', '#E8C547',
+  '#F2A33A', '#EE7B5E', '#DA5C8C', '#8A6BE8', '#E85D8A', '#FF6B9D',
+  '#5B6D9A', '#4C7A70', '#C66B44', '#7A4DAE', '#9B59B6', '#3498DB',
+  '#2F4F7F', '#A5537A', '#1ABC9C', '#E74C3C', '#F39C12', '#2ECC71',
+  '#9B6B3D', '#6C5B7B', '#00CED1', '#FF69B4', '#32CD32', '#FF4500',
 ];
 
 let _lastPickerColor = '';
@@ -54,8 +55,8 @@ function applyPickerColor(hex) {
   if (mc) mc.content = hex;
 }
 
-const BALL_COUNT_MIN = 18;
-const BALL_COUNT_MAX = 26;
+const BALL_COUNT_MIN = 28;
+const BALL_COUNT_MAX = 42;
 const COLLISION_ITERATIONS = 5;
 
 const BALLS = {
@@ -73,6 +74,32 @@ function updateBallPos(b) {
   if (!b.el) return;
   b.el.style.left = `${b.x - b.r}px`;
   b.el.style.top = `${b.y - b.r}px`;
+}
+
+function resolveDraggedBallCollisions(dragged) {
+  const PUSH_STRENGTH = 0.6;
+  for (let iter = 0; iter < 4; iter++) {
+    for (const o of BALLS.list) {
+      if (o === dragged || o.dragging) continue;
+      const dx = o.x - dragged.x, dy = o.y - dragged.y;
+      const dist = Math.hypot(dx, dy);
+      const minD = dragged.r + o.r;
+      if (dist < minD - 0.01) {
+        const nx = dist > 0.001 ? dx / dist : 1;
+        const ny = dist > 0.001 ? dy / dist : 0;
+        const overlap = minD - dist;
+        const totalR = dragged.r + o.r;
+        const oRatio = dragged.r / totalR;
+        o.x += nx * overlap * oRatio;
+        o.y += ny * overlap * oRatio;
+        o.vx += nx * overlap * PUSH_STRENGTH;
+        o.vy += ny * overlap * PUSH_STRENGTH;
+        o.x = Math.max(o.r, Math.min(BALLS.w - o.r, o.x));
+        o.y = Math.max(o.r, Math.min(BALLS.h - o.r, o.y));
+        updateBallPos(o);
+      }
+    }
+  }
 }
 
 function tick() {
@@ -164,8 +191,8 @@ function closeColorPicker() {
 function initColorBalls() {
   const fab = document.getElementById('palette-fab');
   const backdrop = document.getElementById('color-picker-backdrop');
-  if (fab) fab.addEventListener('click', () => { sfx.click(); openColorPicker(); });
-  if (backdrop) backdrop.addEventListener('click', closeColorPicker);
+  if (fab) fab.addEventListener('click', () => { sfx.click(); monsterReact('surprised'); openColorPicker(); });
+  if (backdrop) backdrop.addEventListener('click', () => { closeColorPicker(); monsterReact('idle'); });
 }
 
 function buildColorBalls() {
@@ -250,6 +277,7 @@ function buildColorBalls() {
       ball.x = Math.max(ball.r, Math.min(BALLS.w - ball.r, px));
       ball.y = Math.max(ball.r, Math.min(BALLS.h - ball.r, py));
       updateBallPos(ball);
+      resolveDraggedBallCollisions(ball);
     });
 
     div.addEventListener('pointerup', (e) => {
@@ -276,6 +304,7 @@ function buildColorBalls() {
       g.lockedTheme = 'custom';
       applyPickerColor(color);
       closeColorPicker();
+      monsterReact('idle');
     });
 
     ball.el = div;
@@ -365,7 +394,7 @@ function burstParticles(cx, cy) {
       `font-size:${13 + Math.random() * 11}px`,
     ].join(';');
     layer.appendChild(el);
-    setTimeout(() => el.remove(), 900);
+    setTimeout(() => el.remove(), 1700);
   }
 }
 
@@ -379,7 +408,7 @@ function ringExpand(cx, cy, color = 'white') {
     border: `4px solid ${color}`,
   });
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 650);
+  setTimeout(() => el.remove(), 1200);
 }
 
 function flipToAnswer(answer) {
@@ -401,8 +430,8 @@ function monsterReact(type) {
   const antL = document.getElementById('ant-l');
   const antR = document.getElementById('ant-r');
   app.classList.remove('react-correct', 'react-wrong');
-  char.classList.remove('state-correct', 'state-wrong', 'state-idle');
-  eyes.classList.remove('excited', 'sad', 'happy');
+  char.classList.remove('state-correct', 'state-wrong', 'state-idle', 'state-surprised');
+  eyes.classList.remove('excited', 'sad', 'happy', 'surprised');
   antL.classList.remove('bounce');
   antR.classList.remove('bounce');
   void app.offsetWidth;
@@ -423,6 +452,11 @@ function monsterReact(type) {
       eyes.classList.remove('sad'); eyes.classList.add('happy');
       char.classList.remove('state-wrong'); char.classList.add('state-idle');
     }, 850);
+  } else if (type === 'surprised') {
+    eyes.classList.remove('excited', 'sad', 'happy');
+    eyes.classList.add('surprised');
+    char.classList.remove('state-correct', 'state-wrong', 'state-idle');
+    char.classList.add('state-surprised');
   } else {
     // idle: 最初に excited → happy と遷移させて生き生きとした印象に
     char.classList.add('state-idle');
@@ -439,6 +473,7 @@ function celebrateCorrect(btnEl) {
   const cx = r.left + r.width / 2;
   const cy = r.top  + r.height / 2;
   burstParticles(cx, cy);
+  popCrackers(cy);
   ringExpand(cx, cy, 'white');
   monsterReact('correct');
   setTimeout(() => flipToAnswer(g.problem.answer), 50);
@@ -454,7 +489,7 @@ function launchConfetti(n = 45) {
     setTimeout(() => {
       const el  = document.createElement('div');
       const sz  = 5 + Math.random() * 9;
-      const dur = 1.2 + Math.random() * 1.6;
+      const dur = 2.2 + Math.random() * 1.4;
       Object.assign(el.style, {
         position: 'fixed', top: '-20px',
         left: Math.random() * 100 + 'vw',
@@ -466,12 +501,83 @@ function launchConfetti(n = 45) {
         '--tx': (Math.random() * 80 - 40) + 'px',
         '--ty': (80 + Math.random() * 120) + 'px',
         '--rot': (Math.random() * 720) + 'deg',
-        animationDelay: (Math.random() * .4) + 's',
+        animationDelay: (Math.random() * .5) + 's',
       });
       wrap.appendChild(el);
-      setTimeout(() => el.remove(), (dur + .8) * 1000);
-    }, i * 20);
+      setTimeout(() => el.remove(), (dur + 1.2) * 1000);
+    }, i * 25);
   }
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function popCrackers(cy) {
+  const wrap = document.getElementById('burst-layer');
+  const app  = document.getElementById('app');
+  if (!wrap || !app) return;
+
+  const ar = app.getBoundingClientRect();
+  const y  = clamp(cy, ar.top + 120, ar.bottom - 140);
+  const leftX  = ar.left + 12;
+  const rightX = ar.right - 12;
+
+  const shoot = (x, dir) => {
+    const n = 18;
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      const r  = Math.random();
+      const color = CONF[Math.floor(Math.random() * CONF.length)];
+
+      let w, h, cls = 'cracker-p';
+      if (r < 0.55) { // ストリーマー（細長）
+        w = 2 + Math.random() * 3;
+        h = 12 + Math.random() * 20;
+      } else if (r < 0.82) { // 四角
+        w = 5 + Math.random() * 9;
+        h = 5 + Math.random() * 9;
+      } else { // 三角
+        w = 8 + Math.random() * 12;
+        h = 8 + Math.random() * 12;
+        cls += ' tri';
+      }
+
+      const dur = 1550 + Math.random() * 750;
+      const delay = (i * 6) + Math.random() * 70;
+      const sx = (Math.random() * 14 - 7);
+      const sy = (Math.random() * 14 - 7);
+      const tx0 = dir * (26 + Math.random() * 34) + (Math.random() * 14 - 7);
+      const ty0 = -(14 + Math.random() * 34);
+      const tx2 = dir * (140 + Math.random() * 180) + (Math.random() * 40 - 20);
+      const ty1 = -(70 + Math.random() * 140);
+      const ty2 = 100 + Math.random() * 260;
+      const tx1 = tx2 * (0.55 + Math.random() * 0.1);
+      const rot2 = (Math.random() * 920 - 460) + 'deg';
+      const rot1 = (Math.random() * 520 - 260) + 'deg';
+      const rot0 = (Math.random() * 220 - 110) + 'deg';
+
+      el.className = cls;
+      el.style.cssText = [
+        `left:${x}px`, `top:${y}px`,
+        `width:${w}px`, `height:${h}px`,
+        `background:${color}`,
+        `border-radius:${r < 0.55 ? '2px' : (r < 0.82 ? '3px' : '0')}`,
+        `--dur:${dur.toFixed(0)}ms`,
+        `--delay:${delay.toFixed(0)}ms`,
+        `--sx:${sx.toFixed(1)}px`, `--sy:${sy.toFixed(1)}px`,
+        `--tx0:${tx0.toFixed(1)}px`, `--ty0:${ty0.toFixed(1)}px`,
+        `--tx1:${tx1.toFixed(1)}px`, `--ty1:${ty1.toFixed(1)}px`,
+        `--tx2:${tx2.toFixed(1)}px`, `--ty2:${ty2.toFixed(1)}px`,
+        `--rot0:${rot0}`, `--rot1:${rot1}`, `--rot2:${rot2}`,
+      ].join(';');
+
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), dur + delay + 500);
+    }
+  };
+
+  const shot = () => { shoot(leftX, 1); shoot(rightX, -1); };
+  shot();
+  setTimeout(shot, 170);
 }
 
 function scorePopup(pts, x, y) {
@@ -482,12 +588,12 @@ function scorePopup(pts, x, y) {
     fontFamily: 'Nunito, sans-serif', fontSize: '1.5rem', fontWeight: '900',
     color: 'white', textShadow: '0 2px 6px rgba(0,0,0,.3)',
     pointerEvents: 'none', zIndex: '950',
-    animation: 'burstOut 1s ease forwards',
+    animation: 'burstOut 1.4s ease forwards',
     '--tx': '0px', '--ty': '-70px', '--rot': '0deg',
   });
   el.textContent = `+${pts}`;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1100);
+  setTimeout(() => el.remove(), 1500);
 }
 
 function showStreak(n) {
@@ -552,7 +658,7 @@ class DigitRecognizer {
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = (y * W + x) * 4;
-        if (px[i + 3] > 10 && px[i] < 230) {
+        if (px[i + 3] > 10 && px[i] < 200) {
           if (x < x0) x0 = x; if (x > x1) x1 = x;
           if (y < y0) y0 = y; if (y > y1) y1 = y;
         }
@@ -570,7 +676,7 @@ class DigitRecognizer {
     for (let x = x0; x <= x1; x++)
       for (let y = y0; y <= y1; y++) {
         const i = (y * W + x) * 4;
-        if (px[i + 3] > 10 && px[i] < 230) raw[x - x0]++;
+        if (px[i + 3] > 10 && px[i] < 200) raw[x - x0]++;
       }
 
     const smooth = raw.map((_, i) => {
@@ -591,8 +697,8 @@ class DigitRecognizer {
     const shouldSplit = minIdx >= 0 && (
       minVal < avg * 0.15 ||
       (ratio > 1.3 && minVal < avg * 0.28) ||
-      (ratio > 1.7 && minVal < avg * 0.40) ||
-      (ratio > 2.2 && minVal < avg * 0.55)
+      (isTouch && ratio > 1.7 && minVal < avg * 0.40) ||
+      (isTouch && ratio > 2.2 && minVal < avg * 0.55)
     );
 
     if (shouldSplit) {
@@ -631,7 +737,7 @@ class DigitRecognizer {
     }
     this._dilate(raw, 28, 28);
     for (let i = 0; i < raw.length; i++)
-      raw[i] = raw[i] > 0.12 ? Math.min(raw[i] * 1.5, 1.0) : 0;
+      raw[i] = raw[i] > 0.15 ? Math.min(raw[i] * 1.5, 1.0) : 0;
     return raw;
   }
 
@@ -666,10 +772,10 @@ class DigitRecognizer {
 
 // ── DrawingCanvas ─────────────────────────────────────────────
 class DrawingCanvas {
-  constructor(el, { lineWidth=10, color='#1C1B3A', onStrokeEnd=null } = {}) {
+  constructor(el, { lineWidth=10, color='#1C1B3A', onStrokeEnd=null, onStrokeStart=null } = {}) {
     this.el = el; this.ctx = el.getContext('2d', { willReadFrequently: true });
     this.isDrawing = false; this.strokes = []; this._cur = [];
-    this.lineWidth = lineWidth; this.color = color; this.onStrokeEnd = onStrokeEnd;
+    this.lineWidth = lineWidth; this.color = color; this.onStrokeEnd = onStrokeEnd; this.onStrokeStart = onStrokeStart;
     this._init(); this._bind();
   }
   _init() {
@@ -683,7 +789,7 @@ class DrawingCanvas {
     ctx.clearRect(0, 0, el.width, el.height);
     ctx.save();
     ctx.fillStyle = '#FAFAFA'; ctx.fillRect(0, 0, el.width, el.height);
-    ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 11]);
+    ctx.strokeStyle = 'rgba(0,0,0,.11)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 11]);
     ctx.beginPath(); ctx.moveTo(0, el.height / 2); ctx.lineTo(el.width, el.height / 2); ctx.stroke();
     ctx.setLineDash([]);
     ctx.strokeStyle = this.color; ctx.lineWidth = this.lineWidth;
@@ -710,6 +816,7 @@ class DrawingCanvas {
     el.addEventListener('mouseleave', nd);
   }
   _start(p) {
+    if (this.onStrokeStart) this.onStrokeStart(this);
     this.isDrawing = true; this._cur = [p];
     const ctx = this.ctx;
     ctx.strokeStyle = this.color; ctx.lineWidth = this.lineWidth;
@@ -791,19 +898,23 @@ function setDifficulty(key) {
     b.classList.toggle('active', b.dataset.diff === key);
   });
   const label = el.diffToggleLabel;
-  if (label) label.textContent = DIFF_LABELS[key] ?? key;
+  const toggle = el.diffToggle;
+  const txt = DIFF_LABELS[key] ?? key;
+  if (label) label.textContent = txt;
+  if (toggle) toggle.setAttribute('aria-label', `もんだいしゅう: ${txt}`);
   if (g.lockedTheme === null) applyTheme(DIFF_COLORS[key] ?? 0);
 }
 
+// ── Device detection ──────────────────────────────────────────
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
 // ── Game state ────────────────────────────────────────────────
-const FREE_TOTAL = 10, STORY_TOTAL = 5, MAX_LIVES = 3;
+const FREE_TOTAL = 10, MAX_LIVES = 3;
 const g = {
   problem: null, answered: false,
   score: 0, streak: 0, lives: MAX_LIVES, qNum: 0,
   lastRecognized: null, lockedTheme: null,
 };
-const story = { active: false, stageId: null, _showingResult: false, data: storyLoad() };
-function getTotal() { return story.active ? STORY_TOTAL : FREE_TOTAL; }
 
 // ── DOM refs ──────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -829,12 +940,10 @@ const el = {
   diffToggleLabel: $('diff-toggle-label'),
   diffDrawer:   $('diff-drawer'),
   diffSection:  $('diff-section'),
-  storyScreen:  $('story-screen'),
-  storyModeBtn: $('story-mode-btn'),
-  storyBackBtn: $('story-back-btn'),
+
 };
 
-const DIFF_LABELS = { easy:'1ねんせい①', medium:'1ねんせい②', normal:'2ねんせい①', hard:'2ねんせい②', mult1:'かけざん①', mult2:'かけざん②', div1:'わりざん①', div2:'わりざん②' };
+const DIFF_LABELS = { easy:'1年①', medium:'1年②', normal:'2年①', hard:'2年②', mult1:'かけ算①', mult2:'かけ算②', div1:'わり算①', div2:'わり算②' };
 
 // ── Feedback helper ───────────────────────────────────────────
 let _feedbackTimer = null;
@@ -862,9 +971,9 @@ function shakeCanvas() {
 
 // ── Stats ─────────────────────────────────────────────────────
 function renderStats() {
-  el.qVal.textContent     = `${g.qNum}/${getTotal()}`;
+  el.qVal.textContent     = `${g.qNum}/${FREE_TOTAL}`;
   el.scoreVal.textContent = g.score;
-  el.prog.style.width     = (g.qNum / getTotal() * 100) + '%';
+  el.prog.style.width     = (g.qNum / FREE_TOTAL * 100) + '%';
 }
 
 // ── Load problem ──────────────────────────────────────────────
@@ -892,6 +1001,10 @@ function loadProblem() {
 
   el.doneBtn.classList.remove('hidden');
   el.inputActions.classList.remove('hidden');
+  el.clearBtn.classList.remove('hidden');
+  el.numpadToggle.classList.remove('hidden');
+  const hwBtn = document.getElementById('handwrite-toggle');
+  if (hwBtn) hwBtn.classList.remove('hidden');
   hideNumpad();
 
   g.lastRecognized = null;
@@ -908,7 +1021,7 @@ el.doneBtn.addEventListener('click', async () => {
   if (g.answered) return;
   sfx.click();
 
-  if (drawingCanvas.isEmpty()) {
+  if (drawingCanvas.isEmpty() && g.lastRecognized === null) {
     showFeedback('もういちど かいてみよう', true);
     shakeCanvas(); return;
   }
@@ -930,13 +1043,14 @@ el.doneBtn.addEventListener('click', async () => {
   g.lastRecognized = recognized;
   el.recognizedDisplay.textContent = recognized;
   el.recognizedDisplay.classList.remove('hidden');
-  handleAnswer(recognized);
+  handleAnswer(recognized, el.doneBtn);
 });
 
 // ── Answer handler ────────────────────────────────────────────
-function handleAnswer(recognized) {
+function handleAnswer(recognized, positionEl) {
   if (g.answered) return;
   const ok = recognized === g.problem.answer;
+  const posEl = positionEl || el.doneBtn;
 
   if (ok) {
     g.answered = true;
@@ -944,10 +1058,10 @@ function handleAnswer(recognized) {
     const pts = 10 + Math.max(0, (g.streak - 1) * 5);
     g.score += pts;
 
-    const r = el.doneBtn.getBoundingClientRect();
+    const r = posEl.getBoundingClientRect();
     scorePopup(pts, r.left + r.width / 2, r.top);
 
-    celebrateCorrect(el.doneBtn);
+    celebrateCorrect(posEl);
     sfx.correct();
     showStreak(g.streak);
     renderStats();
@@ -955,6 +1069,10 @@ function handleAnswer(recognized) {
     el.doneBtn.classList.add('hidden');
     el.inputActions.classList.add('hidden');
     hideNumpad();
+    el.clearBtn.classList.add('hidden');
+    el.numpadToggle.classList.add('hidden');
+    const hw = document.getElementById('handwrite-toggle');
+    if (hw) hw.classList.add('hidden');
     showNextBtnSafe();
   } else {
     g.streak = 0;
@@ -977,6 +1095,10 @@ function handleAnswer(recognized) {
       el.doneBtn.classList.add('hidden');
       el.inputActions.classList.add('hidden');
       hideNumpad();
+      el.clearBtn.classList.add('hidden');
+      el.numpadToggle.classList.add('hidden');
+      const hw2 = document.getElementById('handwrite-toggle');
+      if (hw2) hw2.classList.add('hidden');
       showNextBtnSafe();
     } else {
       el.doneBtn.classList.remove('hidden');
@@ -998,9 +1120,8 @@ function showNextBtnSafe() {
 el.nextBtn.addEventListener('click', () => {
   if (el.nextBtn.classList.contains('disabled')) return;
   sfx.click();
-  if (g.qNum >= getTotal()) {
-    if (story.active) finishStoryStage();
-    else showModal();
+  if (g.qNum >= FREE_TOTAL) {
+    showModal();
   } else {
     loadProblem();
   }
@@ -1008,7 +1129,7 @@ el.nextBtn.addEventListener('click', () => {
 
 // ── Game over modal ───────────────────────────────────────────
 function showModal() {
-  const total = getTotal();
+  const total = FREE_TOTAL;
   const tbl = [['★★★','かんぺき！', total*10+20],['★★','すごい！', total*9],['★','よくできた！', total*6]];
   const row  = tbl.find(([,,t]) => g.score >= t) ?? ['','がんばった！', 0];
   el.mIcon.textContent  = row[0];
@@ -1020,15 +1141,8 @@ function showModal() {
 el.mBtn.addEventListener('click', () => {
   sfx.click();
   el.modal.classList.add('hidden');
-  if (story._showingResult) {
-    story._showingResult = false;
-    el.mBtn.textContent = 'もう一度！';
-    el.diffSection.classList.remove('hidden');
-    showStoryScreen();
-  } else {
-    Object.assign(g, { score:0, streak:0, lives:MAX_LIVES, qNum:0 });
-    loadProblem();
-  }
+  Object.assign(g, { score:0, streak:0, lives:MAX_LIVES, qNum:0 });
+  loadProblem();
 });
 
 // ── Canvas clear ──────────────────────────────────────────────
@@ -1043,19 +1157,63 @@ el.clearBtn.addEventListener('click', () => {
 
 // ── Numpad ────────────────────────────────────────────────────
 let _numpadVal = '';
+function drawNumpadDottedLine() {
+  const c = document.getElementById('numpad-line-canvas');
+  const wrap = c?.closest('#numpad-display');
+  if (!c || !wrap) return;
+  const r = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  c.width = Math.round(r.width * dpr);
+  c.height = Math.round(r.height * dpr);
+  c.style.width = r.width + 'px';
+  c.style.height = r.height + 'px';
+  const ctx = c.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, r.width, r.height);
+  ctx.strokeStyle = 'rgba(0,0,0,.11)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.setLineDash([5, 11]);
+  ctx.beginPath();
+  ctx.moveTo(0, r.height / 2);
+  ctx.lineTo(r.width, r.height / 2);
+  ctx.stroke();
+}
 function showNumpad() {
   _numpadVal = ''; el.numpadDisplay.textContent = '';
   el.numpad.classList.remove('hidden');
   el.numpadToggle.classList.add('active');
+  el.canvas.parentElement.classList.add('hidden');
+  requestAnimationFrame(() => { drawNumpadDottedLine(); });
 }
+const _numpadLineRo = new ResizeObserver(() => {
+  if (el.numpad && !el.numpad.classList.contains('hidden')) drawNumpadDottedLine();
+});
+const numpadWrap = document.getElementById('numpad-display-wrap');
+if (numpadWrap) _numpadLineRo.observe(numpadWrap);
 function hideNumpad() {
+  if (_numpadVal) {
+    const num = parseInt(_numpadVal, 10);
+    if (!isNaN(num)) {
+      g.lastRecognized = num;
+      el.recognizedDisplay.textContent = num;
+      el.recognizedDisplay.classList.remove('hidden');
+    }
+  }
   el.numpad.classList.add('hidden');
   el.numpadToggle.classList.remove('active');
+  el.canvas.parentElement.classList.remove('hidden');
   _numpadVal = ''; el.numpadDisplay.textContent = '';
 }
 el.numpadToggle.addEventListener('click', () => {
   sfx.click();
   if (el.numpad.classList.contains('hidden')) showNumpad(); else hideNumpad();
+});
+const handwriteToggle = document.getElementById('handwrite-toggle');
+if (handwriteToggle) handwriteToggle.addEventListener('click', () => {
+  sfx.click();
+  hideNumpad();
 });
 el.numpad.addEventListener('click', e => {
   const btn = e.target.closest('.nk');
@@ -1070,7 +1228,8 @@ el.numpad.addEventListener('click', e => {
     g.lastRecognized = num;
     el.recognizedDisplay.textContent = num;
     el.recognizedDisplay.classList.remove('hidden');
-    handleAnswer(num);
+    _numpadVal = ''; el.numpadDisplay.textContent = '';
+    handleAnswer(num, btn);
     return;
   } else {
     if (_numpadVal.length < 2) _numpadVal += val;
@@ -1101,8 +1260,13 @@ function scheduleRecognition() {
   _recognizeDebounce = setTimeout(() => { _recognizeDebounce = null; runRecognitionAndUpdate(); }, 500);
 }
 
+function clearRecognizedOnStrokeStart() {
+  g.lastRecognized = null;
+  el.recognizedDisplay.classList.add('hidden');
+  el.recognizedDisplay.textContent = '';
+}
 const drawingCanvas = new DrawingCanvas(el.canvas, {
-  lineWidth: 10, color: '#1C1B3A', onStrokeEnd: scheduleRecognition,
+  lineWidth: 10, color: '#1C1B3A', onStrokeEnd: scheduleRecognition, onStrokeStart: clearRecognizedOnStrokeStart,
 });
 
 // ── Difficulty bar ────────────────────────────────────────────
@@ -1149,125 +1313,9 @@ if (el.diffToggle) el.diffToggle.addEventListener('click', () => {
   document.addEventListener('touchstart', e => { if (e.touches[0]) movePupils(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
 })();
 
-// ── Story Mode ────────────────────────────────────────────────
-const STORY_STAGES = [
-  { id:1, name:'たまご',   diff:'easy'   },
-  { id:2, name:'アンテナ', diff:'medium' },
-  { id:3, name:'まゆげ',   diff:'normal' },
-  { id:4, name:'キラキラ', diff:'hard'   },
-  { id:5, name:'かんむり', diff:'mult1'  },
-  { id:6, name:'かがやき', diff:'mult2'  },
-  { id:7, name:'マント',   diff:'div1'   },
-  { id:8, name:'でんせつ', diff:'div2'   },
-];
-
-function storyLoad() {
-  try {
-    const raw = localStorage.getItem('mathmon_story');
-    if (!raw) return { stages: {}, highestCleared: 0 };
-    return JSON.parse(raw);
-  } catch (_) { return { stages: {}, highestCleared: 0 }; }
-}
-
-function storySave(data) {
-  try { localStorage.setItem('mathmon_story', JSON.stringify(data)); } catch (_) {}
-}
-
-function applyMonsterGrowth(n) {
-  const app = document.getElementById('app');
-  for (let i = 1; i <= 8; i++) app.classList.remove(`mon-s${i}`);
-  for (let i = 1; i <= n; i++) app.classList.add(`mon-s${i}`);
-}
-
-function buildStoryMap() {
-  const map = document.getElementById('story-map');
-  map.innerHTML = '';
-  const d = story.data;
-  STORY_STAGES.forEach((s, i) => {
-    if (i > 0) {
-      const line = document.createElement('div');
-      const prevCleared = !!d.stages[STORY_STAGES[i - 1].id];
-      line.className = `stage-path-line ${prevCleared ? 'cleared' : 'locked'}`;
-      map.appendChild(line);
-    }
-    const stageData  = d.stages[s.id];
-    const isCleared  = !!stageData;
-    const isUnlocked = s.id <= (d.highestCleared || 0) + 1;
-    const isLocked   = !isUnlocked;
-    const isCurrent  = !isCleared && isUnlocked;
-    let stars = '';
-    if (isCleared)     stars = '★'.repeat(stageData.stars) + '☆'.repeat(3 - stageData.stars);
-    else if (isCurrent) stars = '☆☆☆';
-    const node = document.createElement('div');
-    node.className = `stage-node ${isCleared ? 'cleared' : isCurrent ? 'current' : 'locked'}`;
-    node.innerHTML = `<div class="stage-num">${s.id}</div><div class="stage-name">${s.name}</div><div class="stage-stars">${stars}</div>`;
-    if (!isLocked) node.addEventListener('click', () => { sfx.click(); startStoryStage(s.id); });
-    map.appendChild(node);
-  });
-}
-
-function showStoryScreen() {
-  buildStoryMap();
-  el.storyScreen.classList.remove('hidden');
-  document.getElementById('main-content').classList.add('hidden');
-  document.getElementById('bottom-bar').classList.add('hidden');
-}
-
-function hideStoryScreen() {
-  el.storyScreen.classList.add('hidden');
-  document.getElementById('main-content').classList.remove('hidden');
-  document.getElementById('bottom-bar').classList.remove('hidden');
-}
-
-function startStoryStage(id) {
-  const stage = STORY_STAGES.find(s => s.id === id);
-  if (!stage) return;
-  story.active  = true;
-  story.stageId = id;
-  el.storyScreen.classList.add('hidden');
-  document.getElementById('main-content').classList.remove('hidden');
-  document.getElementById('bottom-bar').classList.remove('hidden');
-  el.diffSection.classList.add('hidden');
-  setDifficulty(stage.diff);
-  Object.assign(g, { score: 0, streak: 0, lives: MAX_LIVES, qNum: 0 });
-  loadProblem();
-}
-
-function finishStoryStage() {
-  const id   = story.stageId;
-  const data = story.data;
-  const stars = g.score >= 60 ? 3 : g.score >= 30 ? 2 : 1;
-  const prev  = data.stages[id];
-  if (!prev || stars > prev.stars) {
-    data.stages[id] = { stars, bestScore: g.score };
-  } else if (g.score > prev.bestScore) {
-    data.stages[id].bestScore = g.score;
-  }
-  if (id > (data.highestCleared || 0)) data.highestCleared = id;
-  storySave(data);
-  applyMonsterGrowth(data.highestCleared);
-  story.active  = false;
-  story.stageId = null;
-  showStoryResultModal(stars, id);
-}
-
-function showStoryResultModal(stars, id) {
-  const msgs = { 3:'かんぺき！', 2:'すごい！', 1:'よくできた！' };
-  el.mIcon.textContent  = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-  el.mTitle.textContent = msgs[stars];
-  el.mSub.textContent   = `${STORY_TOTAL}もん　${g.score}てん`;
-  el.mBtn.textContent   = 'マップへ！';
-  story._showingResult  = true;
-  el.modal.classList.remove('hidden');
-  sfx.end(); launchConfetti(stars >= 2 ? 80 : 40);
-}
-
-if (el.storyModeBtn) el.storyModeBtn.addEventListener('click', () => { sfx.click(); showStoryScreen(); });
-if (el.storyBackBtn) el.storyBackBtn.addEventListener('click', () => { sfx.click(); hideStoryScreen(); });
-
 // ── Boot ──────────────────────────────────────────────────────
 initColorBalls();
 applyTheme(DIFF_COLORS['easy']);
-applyMonsterGrowth(story.data.highestCleared);
+setDifficulty(CONFIG.difficulty);
 initProblems().then(() => loadProblem());
 recognizer._ensureModel().then(ok => { if (ok) console.log('[MathMon] MNIST ready'); });
