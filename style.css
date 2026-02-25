@@ -353,7 +353,7 @@ html, body { height: 100%; background: #0F0E1A; }
   background: rgba(255,255,255,.16); padding: 3px 14px;
   border-radius: 50px; margin-bottom: 8px;
 }
-#prob-eq { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; box-sizing: content-box; margin-bottom: 24px; }
+#prob-eq { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; box-sizing: content-box; margin-bottom: 16px; }
 #num-a, #num-b  { font-size: clamp(3.2rem,12vw,4.2rem); font-weight: 900; color: white; line-height: 1; }
 #op-sym  { font-size: clamp(2.2rem,8vw,3rem); font-weight: 900; color: rgba(255,255,255,.5); line-height: 1; }
 #eq-sym  { font-size: clamp(1.8rem,6vw,2.4rem); font-weight: 700; color: rgba(255,255,255,.3); line-height: 1; }
